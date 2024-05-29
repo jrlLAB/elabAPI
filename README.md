@@ -1,5 +1,6 @@
 # elab API
 
+By Michael Pence, Gavin Hazen
 
 ## Install
 
