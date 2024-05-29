@@ -1,12 +1,13 @@
 from .main import instrument
+import time
 
 class AlicatMFC(instrument):
 
     def __init__(self, com_port, **kwargs):
-        super().__init__(com_port,baud_rate=19200, **kwargs)
+        super().__init__(com_port,baud_rate=57600, **kwargs)
 
-        self.model = 'Alicat'
-        self.type = 'controller'
+        self.model = 'Alicat_MFC'
+        self.type = 'MFC'
         self.address = 'A'
 
         if 'address' in kwargs:
@@ -21,27 +22,31 @@ class AlicatMFC(instrument):
         parameter1, parameter2, parameter3 = [kwargs.get(param, '') for param in ('parameter1', 'parameter2', 'parameter3')]
 
         ## Define useful command codes
-        command_dict = {'query_dataframe' : f'A??D*',
+        command_dict = {
+                        'query_dataframe' : 'A??D*',
                         'query_data' : 'A',
                         'query_avg_data' : f'ADV {parameter1} {parameter2} {parameter3}',
+                        'query_gas' : 'AGS',
+                        'query_setpoint_range' : 'ALR',
+                        'query_max_ramp_rate' : 'ASR',
+                        'query_setpoint' : 'ALS',
                         'start_streaming' : 'A@ @',
                         'stop_streaming' : '@@ A',
                         'set_gas' : f'AGS {parameter1}',
-                        'query_gas' : 'AGS',
-                        'list_gases' : 'A??G*',
                         'set_startup_gas' : f'AGS {parameter1} 1',
                         'change_setpoint' : f'AS {parameter1}',
-                        'query_setpoint' : 'ALS',
                         'set_setpoint' : f'ALS {parameter1} {parameter2}',
                         'set_units' : f'ADCU {parameter1} 1 {parameter2}',
                         #'tare_absolute_pressure' : 'APC,  #requires an internal barometer, unclear if we have this or not atm
-                        'set_setpoint_mode' : f'ALSS {parameter1}',
-                        'query_setpoint_range' : 'ALR',
+                        'set_setpoint_mode' : f'ALV {parameter1}',
                         'tare_flow' : 'AV',
-                        'set_pressure_limit' : f'AOPL {parameter1}',
-                        'query_max_ramp_rate' : 'ASR',
-                        
+                        'set_pressure_limit' : f'AOPL {parameter1}'
                         }
+        
+        query_dict = {'query_dataframe' : True,'query_data' : True,
+                      'query_avg_data' : True,'query_gas' : True,
+                      'query_setpoint_range' : True,'query_max_ramp_rate' : True,
+                      'query_setpoint' : True, 'tare_flow' : True}
         
         ## Use kwargs to define if you want to print the command hex for troubleshoot
         if 'show_cmd' in kwargs:
@@ -49,29 +54,64 @@ class AlicatMFC(instrument):
 
         command_packet = command_dict[command]+'\r'
         packet = command_packet.encode()
-
         self.ser.write(packet)
-        self.response = self.ser.read(100)
-        if self.response == '':
-            self.response = self.ser.read(100)
+
+        try:
+            if query_dict[command] == True:
+                time.sleep(1)
+        except KeyError: 
+            pass
+
+        self.response = self.ser.read_all()
+        if self.response == b'':
+            time.sleep(0.1)
+            self.response = self.ser.read_all()
         if self.verbose == True:
             print('command Alicat: ',packet)
             print('response Alicat:',self.response)
         return self.response
-    
 
     def query_dataframe(self):
-        self.compile_cmd(command = 'query_dataframe')
+        return self.compile_cmd(command = 'query_dataframe')
 
     def query_data(self):
-        self.compile_cmd(command = 'query_data')
+        return self.compile_cmd(command = 'query_data')
         
     def query_avg_data(self, time, statistic, **kwargs):
         if len(kwargs)== 1:
-            self.compile_cmd(command = 'query_avg_data', parameter1 = time, parameter2 = statistic, parameter3 = kwargs.get(kwargs[0]))
+            return self.compile_cmd(command = 'query_avg_data', parameter1 = time, parameter2 = statistic, parameter3 = kwargs.get(kwargs[0]))
         else:
-            self.compile_cmd(command = 'query_avg_data', parameter1 = time, parameter2 = statistic)
+             return self.compile_cmd(command = 'query_avg_data', parameter1 = time, parameter2 = statistic)
 
+    def query_gas(self):
+        return self.compile_cmd(command = 'query_gas')
+    
+    def query_setpoint(self):
+        return self.compile_cmd(command = 'query_setpoint')
+    
+    def list_setpoint_mode(self):
+        mode_dict = {'Statistic' : 'Value',
+                     'Absolute pressure' : 34,
+                     'Volumetric flow' : 36,
+                     'Mass flow' : 37,
+                     'Gauge pressure' : 38,
+                     'Pressure differential' : 39
+                     }
+        return mode_dict
+
+    def query_setpoint_range(self):
+        return self.compile_cmd(command = 'query_setpoint_range')
+    
+    def query_max_ramp_rate(self):
+        return self.compile_cmd(command = 'query_max_ramp_rate')
+    
+    def list_gases(self):
+        packet = 'A??G*\r'
+        self.ser.write(packet.encode())
+        time.sleep(1)
+        return self.ser.read_all()
+        #return self.compile_cmd(command = 'list_gases')
+    
     def start_streaming(self):
         self.compile_cmd(command = 'start_streaming')
 
@@ -84,14 +124,8 @@ class AlicatMFC(instrument):
         else:
             self.compile_cmd(command = 'set_gas', parameter1 = gas_num)
 
-    def query_gas(self):
-        self.compile_cmd(command = 'query_gas')
-
-    def list_gases(self):   #will have to adjust for response length
-        self.compile_cmd(command = 'list_gases')
-
     def set_startup_gas(self,gas_num):
-        self.compile_cmd(command = 'set_startup_gas', parameter1 = gas_num)
+        return self.compile_cmd(command = 'set_startup_gas', parameter1 = gas_num)
 
     def change_setpoint(self,value):
         self.compile_cmd(command = 'change_setpoint', parameter1 = value)
@@ -101,9 +135,6 @@ class AlicatMFC(instrument):
             raise TypeError('Values must be integers')
         else:
             self.compile_cmd(command = 'set_unit', parameter1 = statistic, parameter2 = unit_value)
-
-    def query_setpoint(self):
-        self.compile_cmd(command = 'query_setpoint')
     
     def set_setpoint(self,setpoint_val, **kwargs):
         if 'unit_val' in kwargs:
@@ -114,28 +145,14 @@ class AlicatMFC(instrument):
         if type(setpoint_mode) != int:
             raise TypeError('Value must be an integer. Call list_setpoint_modes() for more info')
         else:
-            self.compile_cmd(command = 'set_unit', parameter1 = setpoint_mode)
+            return self.compile_cmd(command = 'set_setpoint_mode', parameter1 = setpoint_mode)
     
-    def list_setpoint_mode(self):
-        mode_dict = {'Statistic' : 'Value',
-                     'Absolute pressure' : 34,
-                     'Volumetric flow' : 36,
-                     'Mass flow' : 37,
-                     'Gauge pressure' : 38,
-                     'Pressure differential' : 39
-                     }
-        print(mode_dict)
-
-    def query_setpoint_range(self):
-        self.compile_cmd(command = 'query_setpoint_range')
-
     def tare_flow(self):
-        self.compile_cmd(command = 'tare_flow')
+        return self.compile_cmd(command = 'tare_flow')
 
     def set_pressure_limit(self, pressure_limit):
         if pressure_limit == 0:
             raise ValueError('Do not remove pressure limit.')
         self.compile_cmd(command = 'set_pressure_limit', parameter1 = pressure_limit)
 
-    def query_max_ramp_rate(self):
-        self.compile_cmd(command = 'query_max_ramp_rate')
+
