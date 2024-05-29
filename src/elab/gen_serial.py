@@ -12,3 +12,6 @@ class gen_serial(instrument):
 
     def send(self,comm):
         self.ser.write(bytes(comm, 'utf-8'))
+
+    def readline(self):
+        return self.ser.readline().decode('utf-8')

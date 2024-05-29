@@ -21,15 +21,8 @@ class instrument():
         if 'verbose' in kwargs:
             self.verbose = kwargs.get('verbose')
 
-        if 'dummy' in kwargs:
-            self.dummy = kwargs.get('dummy')
-
         if 'timeout' in kwargs:
             self.timeout = kwargs.get('timeout')
-
-        # init trys to start serial, if it is open it closes it, if dummy == True then skip
-        if self.dummy == False:
-            self.ser = serial.Serial(port=com_port, baudrate=self.baud_rate, timeout=1, rtscts=False)
 
     def close(self):
         self.ser.close()
