@@ -29,26 +29,14 @@ class SY08(instrument):
                     'reset' : 0x45, 'forced_reset' : 0x4F, 
                     'strong_stop' : 0x49, 'device_reset' : 0xAA}
         command_hex = command_dict[command]
-        #use kwargs to define if you want to print the command hex for troubleshoot
-        if 'show_cmd' in kwargs:
-            self.show_cmd = kwargs.get('show_cmd')
-        ##use kwargs to define parameter1
+        parameter1 = 0x00
+        parameter2 = 0x00
         if 'parameter1' in kwargs:
             parameter1 = kwargs.get('parameter1')
-        else:
-            parameter1 = 0x00
-        ##use kwargs to define parameter2
         if 'parameter2' in kwargs:
             parameter2 = kwargs.get('parameter2')
-        else:
-            parameter2 = 0x00
-        # compile: B0 frame header, B1 address byte, B2 command byte, B3 parameter byte 1, B4 parameter byte 2, B5 end of frame, B6 checksum MSB, B7 checksum LSB
-        packet = bytearray([0xCC,self.address,command_hex,parameter1,parameter2,0xDD])
-        #Make sure checksum is little end, here the bytearray goes: [Least significant bit, Most significant bit]
-        checksum = bytearray([(sum(packet) & 0xFF), (sum(packet) >> 8)])
-        packet.extend(checksum)
-        self.ser.write(packet)
-        self.response = self.ser.read(8)
+        packet = self.build_packet(command_hex,parameter1,parameter2)
+        self.response = self.write_read(packet)
         if self.response == '':
             self.response = self.ser.read(8)
         if self.verbose == True:
@@ -56,27 +44,29 @@ class SY08(instrument):
             print('response SY08:',self.response.hex())
         return self.response
         
-       
-    def check_movement(self):
-        # some bloat here that could be cut down, but a faster check movement script
-        packet = bytearray([0xCC,self.address,0x4A,0x00,0x00,0xDD])
+    def build_packet(self,command_hex,parameter1,parameter2):
+        # compile: B0 frame header, B1 address byte, B2 command byte, B3 parameter byte 1, B4 parameter byte 2, B5 end of frame, B6 checksum MSB, B7 checksum LSB B8 frame end
+        packet = bytearray([0xCC,self.address,command_hex,parameter1,parameter2,0xDD])
+        #Make sure checksum is little end, here the bytearray goes: [Least significant bit, Most significant bit]
         checksum = bytearray([(sum(packet) & 0xFF), (sum(packet) >> 8)])
         packet.extend(checksum)
+        return packet
+    
+    def write_read(self,packet):
         self.ser.write(packet)
-        movement_status = self.ser.read(8)
+        return self.ser.read(8)
+
+    def check_movement(self):
+        packet = self.build_packet(0x4A,0x00,0x00)
+        movement_status = self.write_read(packet)
         while movement_status[2] != 0x00:
-            self.ser.write(packet)
-            movement_status = self.ser.read(8)
-        return self.response
+            movement_status = self.write_read(packet)
+        return
 
 
     def query_position(self):
-        # some bloat here that could be cut down, but a faster check movement script
-        packet = bytearray([0xCC,self.address,0x66,0x00,0x00,0xDD])
-        checksum = bytearray([(sum(packet) & 0xFF), (sum(packet) >> 8)])
-        packet.extend(checksum)
-        self.ser.write(packet)
-        query_result = self.ser.read(8)
+        packet = self.build_packet(0x66,0x00,0x00)
+        query_result = self.write_read(packet)
         while query_result == '':
             query_result = self.ser.read(8)
         position = (query_result[4]<<8)|(query_result[4])
@@ -137,7 +127,7 @@ class SY08(instrument):
             self.compile_cmd(command='aspirate', parameter1=steps_to_move.to_bytes(2,'little')[0], parameter2 = steps_to_move.to_bytes(2,'little')[1])
             self.check_movement()
             self.current_position = self.query_position()
-            time.sleep(volume+0.5)
+            time.sleep(volume*1.1)
         else:
             #driver will not move if command is beyond limits so no need to raise Value error
             raise ValueError("Beyond stroke limits!")

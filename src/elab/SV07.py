@@ -16,7 +16,8 @@ class SV07(instrument):
 
         if self.verbose == True:
             print(f'{self.model} connected on {com_port} at {self.baud_rate} bits/s')
-            
+
+
     def compile_cmd(self, command, **kwargs):
 
         ##define possible command codes
@@ -53,7 +54,7 @@ class SV07(instrument):
 
     def check_movement(self):
         packet = self.build_packet(0x4A,0x00,0x00)
-        movement_status = None
+        movement_status = self.write_read(packet)
         while movement_status[2] != 0x00:
             movement_status = self.write_read(packet)
         return

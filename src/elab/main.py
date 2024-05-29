@@ -12,7 +12,6 @@ class instrument():
         self.baud_rate = 9600 #bits/, default for most devices, may need to be changed 
         self.timeout = 1 #1 second timeout
         self.verbose = False #verbose is used by children to either print detailed info or not during operation
-        self.dummy = False #dummy skips comport setup, to test the class
 
         # redefining the below variables if they are found in kwargs
         if 'baud_rate' in kwargs:
@@ -23,6 +22,8 @@ class instrument():
 
         if 'timeout' in kwargs:
             self.timeout = kwargs.get('timeout')
+
+        self.ser = serial.Serial(port=com_port, baudrate=self.baud_rate, timeout=1, rtscts=False)
 
     def close(self):
         self.ser.close()
@@ -61,14 +62,11 @@ class bundle():
         self.air_name = 'air'
         self.flush_name = 'flush'
 
-        if 'cell_name' in kwargs:
-            self.cell_name = kwargs.get('cell_name')
-        if 'waste_name' in kwargs:
-            self.waste_name = kwargs.get('waste_name')
-        if 'air_name' in kwargs:
-            self.air_name = kwargs.get('air_name')
-        if 'flush_name' in kwargs:
-            self.flush_name = kwargs.get('flush_name')
+    def change_default_ports(self,cell_name='cell',waste_name='waste',air_name='air',flush_name='flush'):
+        self.cell_name = cell_name
+        self.waste_name = waste_name
+        self.air_name = air_name
+        self.flush_name = flush_name
         
     def check_types(self,inst_list):
         if all(inst_list):
@@ -163,8 +161,6 @@ class bundle():
                 self.light_dispense(solution,volume_counter)
             else:
                 self.light_dispense(solution,volume)
-    
-            
 
     def remove_cell_contents(self,volume):
         self.check_types([self.valve_bool,self.pump_bool])
