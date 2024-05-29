@@ -9,7 +9,7 @@ setup(
     license='GPL3',
     author='Michael Pence',
     author_email='mapence2@illinois.edu',
-    description='Open source lab automation control',
+    description='Open source lab automation control for electrochemical experiments',
     packages=find_packages('src'),
     package_dir={'':'src'},
     keywords='Electrochemistry',

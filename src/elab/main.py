@@ -83,13 +83,18 @@ class bundle():
         else:
             raise ValueError('Missing instrument!')
 
-    def load_ports(self, filepath):
-        self.check_types([self.valve_bool])
-        
-        self.soln_df, self.port_dict  = pd.read_csv(filepath), {}
-        for n, x in enumerate(self.soln_df['title'].values):
-            self.port_dict[x] = self.soln_df['port'].values[n]
-        self.port_dict_bool = True
+    def load_ports(self, filepath=None):
+        if type(filepath) == dict:
+            self.port_dict = filepath
+            self.port_dict_bool = True
+        elif (type(filepath) == str) & ('.csv' in filepath):
+            self.check_types([self.valve_bool])
+            self.soln_df, self.port_dict  = pd.read_csv(filepath), {}
+            for n, x in enumerate(self.soln_df['title'].values):
+                self.port_dict[x] = self.soln_df['port'].values[n]
+            self.port_dict_bool = True
+        if filepath == None:
+            raise ValueError('No port dictionary provided')
 
     def change_cell(self,cell_name):
         self.cell_name = cell_name
