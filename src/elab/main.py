@@ -56,6 +56,11 @@ class bundle():
             elif x.type == 'balance':
                 self.balance = x
                 self.balance_bool = True
+            elif x.type == 'pumpvalve':
+                self.pump = x
+                self.valve = x
+                self.pump_bool = True
+                self.valve_bool = True
 
         self.cell_name = 'cell'
         self.waste_name = 'waste'
