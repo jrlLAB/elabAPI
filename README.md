@@ -1,6 +1,6 @@
 # elab API
 
-By Michael Pence, Gavin Hazen
+By Michael Pence, Gavin Hazen, Joaquín Rodríguez-López
 
 ## Install
 
