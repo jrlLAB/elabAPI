@@ -18,6 +18,7 @@ class SY01B(instrument):
         self.ports = 9
         self.mode = 0 #store motor mode
         self.position_range = 12001 
+        self.unit = 'uL'
 
         if 'address' in kwargs:
             self.address = kwargs.get('address')
@@ -211,8 +212,8 @@ class SY01B(instrument):
         if rate in range(3751):
             speed = int(rate/60*96000/self.total_volume)
             if self.verbose == True:
-                print(f'Flow rate set to {rate} uL/min. Speed set to {speed} microsteps/sec')
-            self.compile_cmd(command='set_speed', parameter1=speed)
+                print(f'Flow rate set to {rate:.2f} {self.unit}/min. Speed set to {speed} microsteps/sec')
+            self.set_speed(speed)
         else:
             raise ValueError("Flow rate is too fast!")
         
@@ -237,7 +238,9 @@ class SY01B(instrument):
 
 
     def aspirate(self, volume, **kwargs): #This is to pull liquid into the syringe
-        #check kwargs for speed first, adjust if desired
+        #check movement to ensure pump is free
+        self.check_movement()
+        #check kwargs for speed, adjust if desired
         if 'speed' in kwargs:
             speed = kwargs.get('speed')
             self.set_speed(speed)
@@ -259,6 +262,8 @@ class SY01B(instrument):
 
 
     def discharge(self, volume, **kwargs): #This is to push liquid out of the syringe
+        #check movement to ensure pump is free
+        self.check_movement()
         #check kwargs for speed, adjust if desired
         if 'speed' in kwargs:
             speed = kwargs.get('speed')
