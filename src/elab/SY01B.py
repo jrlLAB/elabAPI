@@ -1,6 +1,7 @@
 '''
 This class implements serial communication with the Runze multichannel syringe pump, model SY-01B, using ASCII commands assuming DT protocol.
 '''
+
 from .main import instrument
 import time
 import re
@@ -20,12 +21,15 @@ class SY01B(instrument):
         self.position_range = 12001 
         self.unit = 'uL'
 
+    
         if 'address' in kwargs:
             self.address = kwargs.get('address')
 
         if self.verbose == True:
             print(f'{self.model} connected on {com_port} at {self.baud_rate} bits/s')
-        
+
+        self.set_mode(2)
+        self.init_pump()
 
     def compile_cmd(self, command, **kwargs):
         ## Define user input variables with kwargs
