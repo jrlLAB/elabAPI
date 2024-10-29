@@ -37,3 +37,12 @@ class MUX8(instrument):
         msg = self.ser.readline()
         if self.verbose == True:
             print(msg.decode('utf-8'))
+
+    def gen_all(self):
+        self.send_comm(30)
+    
+    def coll_all(self):
+        self.send_comm(20)
+
+    def all(self):
+        self.send_comm(40)
